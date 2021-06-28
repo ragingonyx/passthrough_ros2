@@ -4,6 +4,8 @@ from rclpy.node import Node
 from sensor_msgs.msg import PointCloud2
 import sensor_msgs_py.point_cloud2 as pc2
 
+import numpy as np
+
 class passthrough_pcl(Node):
  
     def __init__(self):
@@ -21,7 +23,7 @@ class passthrough_pcl(Node):
 
         points = pc2.read_points(msg,field_names=['x','y','z'])
         
-        filtered_points = self.passthrough(pointcloud_data=points, y_thresh=2)
+        filtered_points = self.passthrough(pointcloud_data=points, filter_radius=3.5)
         
         filtered_cloud = pc2.create_cloud_xyz32(header=header, points=filtered_points)
 
@@ -51,6 +53,19 @@ class passthrough_pcl(Node):
 
         for point in pointcloud_data:
             if (point[0] > y_thresh and point[1] > x_thresh and point[2] > z_thresh):
+                filtered_points.append(point)
+                
+        return filtered_points
+        
+
+    def passthrough(self, pointcloud_data, filter_radius):
+        filtered_points = []
+
+        for point in pointcloud_data:
+            a = np.array([point[0], point[1], point[2]])
+            b = np.zeros(3)
+            dist = np.linalg.norm(a-b)
+            if (dist > filter_radius):
                 filtered_points.append(point)
                 
         return filtered_points
