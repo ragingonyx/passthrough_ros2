@@ -1,8 +1,8 @@
 import rclpy
 from rclpy.node import Node
 
-from sensor_msgs.msg import PointCloud2,PointField
-from .point_cloud2 import *
+from sensor_msgs.msg import PointCloud2
+import sensor_msgs_py.point_cloud2 as pc2
 
 class passthrough_pcl(Node):
  
@@ -19,11 +19,11 @@ class passthrough_pcl(Node):
     def listener_callback(self, msg):
         header = msg.header
 
-        points = read_points(msg,field_names=['x','y','z'])
+        points = pc2.read_points(msg,field_names=['x','y','z'])
         
         filtered_points = self.passthrough(pointcloud_data=points, y_thresh=2)
         
-        filtered_cloud = create_cloud_xyz32(header=header, points=filtered_points)
+        filtered_cloud = pc2.create_cloud_xyz32(header=header, points=filtered_points)
 
         self.publisher_.publish(filtered_cloud)
         
