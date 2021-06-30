@@ -5,6 +5,7 @@ from sensor_msgs.msg import PointCloud2
 import sensor_msgs_py.point_cloud2 as pc2
 
 import numpy as np
+import timeit
 
 class passthrough_pcl(Node):
  
@@ -18,13 +19,14 @@ class passthrough_pcl(Node):
         self.subscription  # prevent unused variable warning
         self.publisher_ = self.create_publisher(PointCloud2, '/filtered_points', 10)
         self.cache = {}
+        self.cache_hits = 0
 
     def listener_callback(self, msg):
         header = msg.header
 
         points = pc2.read_points(msg,field_names=['x','y','z'])
-        
-        filtered_points = self.passthrough(pointcloud_data=points, filter_radius=3.5)
+
+        filtered_points = self.passthrough(pointcloud_data=points, filter_radius=3.5, round_size=1)
         
         filtered_cloud = pc2.create_cloud_xyz32(header=header, points=filtered_points)
 
@@ -59,22 +61,31 @@ class passthrough_pcl(Node):
         return filtered_points
         
 
-    def passthrough(self, pointcloud_data, filter_radius):
+    def passthrough(self, pointcloud_data, filter_radius, round_size=1):
+        start = timeit.default_timer()
         filtered_points = []
-
+        
         for point in pointcloud_data:
-            c_value = self.hit_cache(point)
+            coordinates = []
+            for coordinate in point:
+                coordinates.append(round(coordinate, round_size))
+            rounded = tuple(coordinates)
+
+            c_value = self.hit_cache(rounded)
+
             if (c_value == -1):
                 a = np.array([point[0], point[1], point[2]])
                 b = np.zeros(3)
                 dist = np.linalg.norm(a-b)
-                self.fill_cache(point, dist)
+                self.fill_cache(rounded, dist)
             else:
                 dist = c_value
 
             if (dist > filter_radius):
                 filtered_points.append(point)
-                
+        stop = timeit.default_timer()
+        print('Time: ', stop - start)  
+        self.cache_hits = 0
         return filtered_points   
     
     def fill_cache(self, point, radius):
@@ -82,15 +93,11 @@ class passthrough_pcl(Node):
 
     def hit_cache(self, point):
         if (point in self.cache):
-            print("cache was hit")
+            self.cache_hits+=1
             return self.cache[point]
         else:
             return -1
-        
-
-
-
-
+    
 
 def main(args=None):
     rclpy.init(args=args)
