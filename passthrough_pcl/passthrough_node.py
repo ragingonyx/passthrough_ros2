@@ -17,6 +17,7 @@ class passthrough_pcl(Node):
             10)
         self.subscription  # prevent unused variable warning
         self.publisher_ = self.create_publisher(PointCloud2, '/filtered_points', 10)
+        self.cache = {}
 
     def listener_callback(self, msg):
         header = msg.header
@@ -62,19 +63,33 @@ class passthrough_pcl(Node):
         filtered_points = []
 
         for point in pointcloud_data:
-            a = np.array([point[0], point[1], point[2]])
-            b = np.zeros(3)
-            dist = np.linalg.norm(a-b)
+            c_value = self.hit_cache(point)
+            if (c_value == -1):
+                a = np.array([point[0], point[1], point[2]])
+                b = np.zeros(3)
+                dist = np.linalg.norm(a-b)
+                self.fill_cache(point, dist)
+            else:
+                dist = c_value
+
             if (dist > filter_radius):
                 filtered_points.append(point)
                 
-        return filtered_points
+        return filtered_points   
+    
+    def fill_cache(self, point, radius):
+        self.cache[point] = radius
+
+    def hit_cache(self, point):
+        if (point in self.cache):
+            print("cache was hit")
+            return self.cache[point]
+        else:
+            return -1
         
-                
 
-            
 
-           
+
 
 
 def main(args=None):
