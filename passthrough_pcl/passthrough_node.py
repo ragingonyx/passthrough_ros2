@@ -1,16 +1,13 @@
 import rclpy
-
+import sensor_msgs_py.point_cloud2 as pc2
+import numpy as np
 
 from rclpy.node import Node
-
 from sensor_msgs.msg import PointCloud2
 from rcl_interfaces.msg import SetParametersResult
 from rclpy.parameter import Parameter
 
-import sensor_msgs_py.point_cloud2 as pc2
 
-import numpy as np
-import timeit
 
 class passthrough_pcl(Node):
  
@@ -35,7 +32,7 @@ class passthrough_pcl(Node):
                                     ("x_thresh", -999), # The minimum value for x,y,z to be included, used if use_radius is False
                                     ("y_thresh", -999), 
                                     ("z_thresh", -999), 
-                                    ("use_radius", True),
+                                    ("use_radius", True), # Sets passthrough mode
                                     ]
                                 )
 
@@ -117,7 +114,6 @@ def main(args=None):
     rclpy.init(args=args)
     node = passthrough_pcl()
     rclpy.spin(node)
-
     node.destroy_node()
     rclpy.shutdown()
 
