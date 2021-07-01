@@ -1,6 +1,6 @@
 import rclpy
-from rclpy import node
-from rclpy.clock import ClockChange
+
+
 from rclpy.node import Node
 
 from sensor_msgs.msg import PointCloud2
@@ -22,8 +22,9 @@ class passthrough_pcl(Node):
             '/points',
             self.listener_callback,
             10)
+
         self.subscription  # prevent unused variable warning
-      
+
         self.add_on_set_parameters_callback(self.parameter_event_callback)
 
         self.declare_parameters(
@@ -34,24 +35,18 @@ class passthrough_pcl(Node):
                                     ("x_thresh", -999), # The minimum value for x,y,z to be included, used if use_radius is False
                                     ("y_thresh", -999), 
                                     ("z_thresh", -999), 
-                                    ("use_radius", True)
+                                    ("use_radius", True),
                                     ]
                                 )
 
         self.publisher_ = self.create_publisher(PointCloud2, '/filtered_points', 10)
         self.cache = {}
-        self.cache_hits = 0
 
     def listener_callback(self, msg):
         header = msg.header
-
         points = pc2.read_points(msg,field_names=['x','y','z'])
-       
-        
         filtered_points = self.passthrough(pointcloud_data=points)
-        
         filtered_cloud = pc2.create_cloud_xyz32(header=header, points=filtered_points)
-
         self.publisher_.publish(filtered_cloud)
     
     def parameter_event_callback(self, msg):
@@ -69,8 +64,6 @@ class passthrough_pcl(Node):
             if param.name == 'use_radius' and param.type_ == Parameter.Type.BOOL:
                 self.passthrough_mode = param.value
         return SetParametersResult(successful=True)
-            
-        
 
     """
     Filter data from pointcloud.
@@ -86,17 +79,13 @@ class passthrough_pcl(Node):
 
     def passthrough(self, pointcloud_data):
         if (self.get_parameter("use_radius").value == True):
-            start = timeit.default_timer()
             filtered_points = []
-            
             for point in pointcloud_data:
                 coordinates = []
                 for coordinate in point:
                     coordinates.append(round(coordinate, self.round_size))
                 rounded = tuple(coordinates)
-
                 c_value = self.hit_cache(rounded)
-
                 if (c_value == -1):
                     a = np.array([point[0], point[1], point[2]])
                     b = np.zeros(3)
@@ -104,22 +93,14 @@ class passthrough_pcl(Node):
                     self.fill_cache(rounded, dist)
                 else:
                     dist = c_value
-
                 if (dist > self.filter_radius):
                     filtered_points.append(point)
-            stop = timeit.default_timer()
-            print('Time: ', stop - start)  
-            self.cache_hits = 0
-               
+            
         else:
-            start = timeit.default_timer()
             filtered_points = []
-
             for point in pointcloud_data:
                 if (point[0] > self.y_thresh and point[1] > self.x_thresh and point[2] > self.z_thresh):
                     filtered_points.append(point)
-            stop = timeit.default_timer()
-            print('Time: ', stop - start)  
         return filtered_points
         
     def fill_cache(self, point, radius):
@@ -127,7 +108,6 @@ class passthrough_pcl(Node):
 
     def hit_cache(self, point):
         if (point in self.cache):
-            self.cache_hits+=1
             return self.cache[point]
         else:
             return -1

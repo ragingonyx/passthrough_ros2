@@ -3,12 +3,13 @@
 <package format="3">
   <name>passthrough_pcl</name>
   <version>0.0.0</version>
-  <description>TODO: Package description</description>
+  <description>Passthrough Filter for ROS2</description>
   <maintainer email="ephan3@gatech.edu">eric</maintainer>
   <license>TODO: License declaration</license>
 
   <exec_depend>rclpy</exec_depend>
   <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>rcl_interfaces</exec_depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>
