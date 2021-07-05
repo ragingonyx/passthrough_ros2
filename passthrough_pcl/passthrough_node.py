@@ -1,13 +1,12 @@
 import rclpy
 import sensor_msgs_py.point_cloud2 as pc2
 import numpy as np
+import time
 
 from rclpy.node import Node
 from sensor_msgs.msg import PointCloud2
 from rcl_interfaces.msg import SetParametersResult
 from rclpy.parameter import Parameter
-
-
 
 class passthrough_pcl(Node):
  
@@ -32,6 +31,7 @@ class passthrough_pcl(Node):
                                     ("x_thresh", -999), # The minimum value for x,y,z to be included, used if use_radius is False
                                     ("y_thresh", -999), 
                                     ("z_thresh", -999), 
+                                    ("debug", False), 
                                     ("use_radius", True), # Sets passthrough mode
                                     ]
                                 )
@@ -60,6 +60,8 @@ class passthrough_pcl(Node):
                 self.z_thresh = float(param.value)
             if param.name == 'use_radius' and param.type_ == Parameter.Type.BOOL:
                 self.passthrough_mode = param.value
+            if param.name == 'debug' and param.type_ == Parameter.Type.BOOL:
+                self.passthrough_mode = param.value
         return SetParametersResult(successful=True)
 
     """
@@ -75,6 +77,7 @@ class passthrough_pcl(Node):
     """
 
     def passthrough(self, pointcloud_data):
+        start = time.time()
         if (self.get_parameter("use_radius").value == True):
             filtered_points = []
             for point in pointcloud_data:
@@ -82,33 +85,25 @@ class passthrough_pcl(Node):
                 for coordinate in point:
                     coordinates.append(round(coordinate, self.round_size))
                 rounded = tuple(coordinates)
-                c_value = self.hit_cache(rounded)
+                c_value = self.cache[rounded] if rounded in self.cache else -1
                 if (c_value == -1):
                     a = np.array([point[0], point[1], point[2]])
                     b = np.zeros(3)
                     dist = np.linalg.norm(a-b)
-                    self.fill_cache(rounded, dist)
+                    self.cache[rounded] = dist
                 else:
                     dist = c_value
                 if (dist > self.filter_radius):
                     filtered_points.append(point)
-            
         else:
             filtered_points = []
             for point in pointcloud_data:
                 if (point[0] > self.y_thresh and point[1] > self.x_thresh and point[2] > self.z_thresh):
                     filtered_points.append(point)
+        end = time.time()
+        if (self.get_parameter("debug").value == True):
+            print("Time consumed in working: ",end - start)
         return filtered_points
-        
-    def fill_cache(self, point, radius):
-        self.cache[point] = radius
-
-    def hit_cache(self, point):
-        if (point in self.cache):
-            return self.cache[point]
-        else:
-            return -1
-    
 
 def main(args=None):
     rclpy.init(args=args)
