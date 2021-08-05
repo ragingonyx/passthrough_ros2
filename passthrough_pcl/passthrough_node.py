@@ -15,7 +15,7 @@ class passthrough_pcl(Node):
        
         self.subscription= self.create_subscription(
             PointCloud2,
-            '/points',
+            '/points_nonground',
             self.listener_callback,
             10)
 
